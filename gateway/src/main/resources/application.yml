@@ -1,0 +1,122 @@
+server:
+  port: 8088
+
+---
+
+
+keycloak-client:
+  server-url: http://localhost:9090
+  realm: master
+
+spring:
+  config:
+    activate:
+      on-profile: default
+  cloud:
+    gateway:
+      default-filters:
+        - TokenRelay 
+      routes:
+        - id: receipt
+          uri: http://localhost:8082
+          predicates:
+            - Path=/complainments/**,  
+        - id: payment
+          uri: http://localhost:8083
+          predicates:
+            - Path=/fees/**,  
+        - id: user
+          uri: http://localhost:8084
+          predicates:
+            - Path=/users/**,  /getInfos/**
+        - id: complaint
+          uri: http://localhost:8085
+          predicates:
+            - Path=/complaints/**,  
+        - id: frontend
+          uri: http://localhost:8080
+          predicates:
+            - Path=/**
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOriginPatterns:
+              - "*"
+            allowedMethods:
+              - "*"
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
+  security:
+    oauth2:
+      client:
+        provider:
+          keycloak:
+            issuer-uri: ${keycloak-client.server-url}/realms/${keycloak-client.realm}
+            user-name-attribute: preferred_username
+        registration:
+          keycloak:
+            client-id: "<client-id>"
+            client-secret: 
+            redirect-uri: "gateway-path/login/oauth2/code/client-name"
+            authorization-grant-type: authorization_code
+            scope: openid
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${keycloak-client.server-url}/realms/${keycloak-client.realm}/protocol/openid-connect/certs
+
+---
+
+spring:
+  config:
+    activate:
+      on-profile: docker
+  cloud:
+    gateway:
+      routes:
+        - id: receipt
+          uri: http://receipt:8080
+          predicates:
+            - Path=/complainments/** 
+        - id: payment
+          uri: http://payment:8080
+          predicates:
+            - Path=/fees/** 
+        - id: user
+          uri: http://user:8080
+          predicates:
+            - Path=/users/** /getInfos/**
+        - id: complaint
+          uri: http://complaint:8080
+          predicates:
+            - Path=/complaints/** 
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins:
+              - "*"
+            allowedMethods:
+              - "*"
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
+  security:
+    oauth2:
+      client:
+        provider:
+          keycloak:
+            issuer-uri: ${keycloak-client.server-url}/realms/${keycloak-client.realm}
+            user-name-attribute: preferred_username
+        registration:
+          keycloak:
+            client-id: "<client-id>"
+            client-secret: 
+            redirect-uri: "{baseUrl}/login/oauth2/code/keycloak"
+            authorization-grant-type: authorization_code
+            scope: openid
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${keycloak-client.server-url}/realms/${keycloak-client.realm}/protocol/openid-connect/certs
+
+server:
+  port: 8080
